@@ -1,0 +1,1 @@
+"# autoJoosik-mcp-server" 
