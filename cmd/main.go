@@ -27,13 +27,15 @@ type GetStockOut struct {
 }
 
 type BuyStockInput struct {
-	Symbol string `json:"symbol" jsonschema:"종목 코드"`
-	Amount string `json:"amount" jsonschema:"수량"`
+	StkCd string `json:"StkCd" jsonschema:"종목 코드"`
+	Qty   int    `json:"Qty" jsonschema:"수량"`
 }
 
-type BuyResponse struct {
-	Success string `json:"success"`
+type BuyStockOut struct {
 	Message string `json:"message"`
+	StkCd   string `json:"stkCd"`
+	Qty     string `json:"qty"`
+	Error   string `json:"error"`
 }
 
 func GetStock(ctx context.Context, req *mcp.CallToolRequest, input GetStockInput) (
@@ -41,7 +43,7 @@ func GetStock(ctx context.Context, req *mcp.CallToolRequest, input GetStockInput
 	GetStockOut,
 	error,
 ) {
-	result, err := stockapi.CallStockAPI()
+	result, err := stockapi.CallStockInfoAPI()
 	if err != nil {
 		return nil, GetStockOut{}, err
 	}
@@ -55,6 +57,36 @@ func GetStock(ctx context.Context, req *mcp.CallToolRequest, input GetStockInput
 		Content: []mcp.Content{
 			&mcp.TextContent{
 				Text: result.Data,
+			},
+		},
+	}, output, nil
+}
+
+func BuyStock(ctx context.Context, req *mcp.CallToolRequest, input BuyStockInput) (
+	*mcp.CallToolResult,
+	BuyStockOut,
+	error,
+) {
+	// 에이전트가 보낸 값
+	stkCd := input.StkCd
+	Qty := input.Qty
+
+	result, err := stockapi.CallStockBuyAPI(stkCd, Qty)
+	if err != nil {
+		return nil, BuyStockOut{}, err
+	}
+
+	output := BuyStockOut{
+		Message: result.Message,
+		StkCd:   result.StkCd,
+		Qty:     result.Qty,
+		Error:   result.Error,
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: result.Message,
 			},
 		},
 	}, output, nil
@@ -112,8 +144,12 @@ func main() {
 	mcp.AddTool(server, &mcp.Tool{Name: "greet", Description: "인사"}, SayHi)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_stock",
-		Description: "주식 데이터 조회",
+		Description: "내가 관심 있는 주식 데이터를 조회한다.",
 	}, GetStock)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "buy_stock",
+		Description: "주식 종목 코드와 수량을 받아 매수 요청을 보낸다.",
+	}, BuyStock)
 
 	// Run the server over stdin/stdout, until the client disconnects.
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
