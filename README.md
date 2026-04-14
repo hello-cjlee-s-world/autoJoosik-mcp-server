@@ -1,4 +1,4 @@
-# auto-joosik-market-data-fetcher
+# autoJoosik-mcp-server
    
 # Build
 # linux build / amd64
