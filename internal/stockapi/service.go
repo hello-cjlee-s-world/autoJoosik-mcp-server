@@ -19,14 +19,14 @@ type response struct {
 	Mapping interface{} `json:"mapping"`
 }
 
-type BuyResult struct {
+type BuySellResult struct {
 	StkCd   string
 	Qty     string
 	Message string
 	Error   string
 }
 
-type BuyResponse struct {
+type BuySellResponse struct {
 	Status string `json:"status"`
 	StkCd  string `json:"stkCd"`
 	Qty    string `json:"qty"`
@@ -63,7 +63,7 @@ func CallStockInfoAPI() (Result, error) {
 	}, nil
 }
 
-func CallStockBuyAPI(stkCd string, qty int) (BuyResult, error) {
+func CallStockBuyAPI(stkCd string, qty int) (BuySellResult, error) {
 	// 1. 요청 body 생성(POST)
 	reqBody := map[string]interface{}{
 		"StkCd": stkCd,
@@ -72,7 +72,7 @@ func CallStockBuyAPI(stkCd string, qty int) (BuyResult, error) {
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return BuyResult{
+		return BuySellResult{
 			Message: "매수 완료",
 			StkCd:   stkCd,
 			Qty:     fmt.Sprint(qty),
@@ -83,7 +83,7 @@ func CallStockBuyAPI(stkCd string, qty int) (BuyResult, error) {
 	// 2. 요청 생성
 	req, err := http.NewRequest("POST", "http://localhost:6070/market/buy", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return BuyResult{
+		return BuySellResult{
 			Message: "매수 완료",
 			StkCd:   stkCd,
 			Qty:     fmt.Sprint(qty),
@@ -97,7 +97,7 @@ func CallStockBuyAPI(stkCd string, qty int) (BuyResult, error) {
 	// 4. 요청 실행
 	resp, err := client.Do(req)
 	if err != nil {
-		return BuyResult{
+		return BuySellResult{
 			Message: "매수 실패",
 			StkCd:   stkCd,
 			Qty:     fmt.Sprint(qty),
@@ -107,13 +107,70 @@ func CallStockBuyAPI(stkCd string, qty int) (BuyResult, error) {
 	defer resp.Body.Close()
 
 	// 5. 응답 처리
-	var apiResp BuyResponse
+	var apiResp BuySellResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		return BuyResult{}, err
+		return BuySellResult{}, err
 	}
 
-	return BuyResult{
+	return BuySellResult{
 		Message: "매수 완료",
+		StkCd:   apiResp.StkCd,
+		Qty:     apiResp.Qty,
+		Error:   apiResp.Error,
+	}, nil
+}
+
+func CallStockSellAPI(stkCd string, qty int) (BuySellResult, error) {
+	// 1. 요청 body 생성(POST)
+	reqBody := map[string]interface{}{
+		"StkCd": stkCd,
+		"Qty":   qty,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return BuySellResult{
+			Message: "매매 완료",
+			StkCd:   stkCd,
+			Qty:     fmt.Sprint(qty),
+			Error:   err.Error(),
+		}, err
+	}
+
+	// 2. 요청 생성
+	req, err := http.NewRequest("POST", "http://localhost:6070/market/sell", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return BuySellResult{
+			Message: "매매 완료",
+			StkCd:   stkCd,
+			Qty:     fmt.Sprint(qty),
+			Error:   err.Error(),
+		}, err
+	}
+
+	// 3. 헤더 설정
+	client := &http.Client{}
+
+	// 4. 요청 실행
+	resp, err := client.Do(req)
+	if err != nil {
+		return BuySellResult{
+			Message: "매매 실패",
+			StkCd:   stkCd,
+			Qty:     fmt.Sprint(qty),
+			Error:   err.Error(),
+		}, err
+	}
+	defer resp.Body.Close()
+
+	// 5. 응답 처리
+	var apiResp BuySellResponse
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+		return BuySellResult{}, err
+	}
+
+	return BuySellResult{
+		Message: "매매 완료",
 		StkCd:   apiResp.StkCd,
 		Qty:     apiResp.Qty,
 		Error:   apiResp.Error,

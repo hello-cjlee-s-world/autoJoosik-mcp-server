@@ -38,6 +38,18 @@ type BuyStockOut struct {
 	Error   string `json:"error"`
 }
 
+type SellStockInput struct {
+	StkCd string `json:"StkCd" jsonschema:"종목 코드"`
+	Qty   int    `json:"Qty" jsonschema:"수량"`
+}
+
+type SellStockOut struct {
+	Message string `json:"message"`
+	StkCd   string `json:"stkCd"`
+	Qty     string `json:"qty"`
+	Error   string `json:"error"`
+}
+
 func GetStock(ctx context.Context, req *mcp.CallToolRequest, input GetStockInput) (
 	*mcp.CallToolResult,
 	GetStockOut,
@@ -92,6 +104,35 @@ func BuyStock(ctx context.Context, req *mcp.CallToolRequest, input BuyStockInput
 	}, output, nil
 }
 
+func SellStock(ctx context.Context, req *mcp.CallToolRequest, input SellStockInput) (
+	*mcp.CallToolResult,
+	SellStockOut,
+	error,
+) {
+	// 에이전트가 보낸 값
+	stkCd := input.StkCd
+	Qty := input.Qty
+
+	result, err := stockapi.CallStockSellAPI(stkCd, Qty)
+	if err != nil {
+		return nil, SellStockOut{}, err
+	}
+
+	output := SellStockOut{
+		Message: result.Message,
+		StkCd:   result.StkCd,
+		Qty:     result.Qty,
+		Error:   result.Error,
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: result.Message,
+			},
+		},
+	}, output, nil
+}
 func SayHi(ctx context.Context, req *mcp.CallToolRequest, input Input) (
 	*mcp.CallToolResult,
 	Output,
@@ -150,6 +191,10 @@ func main() {
 		Name:        "buy_stock",
 		Description: "주식 종목 코드와 수량을 받아 매수 요청을 보낸다.",
 	}, BuyStock)
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "sell_stock",
+		Description: "주식 종목 코드와 수량을 받아 매매 요청을 보낸다.",
+	}, SellStock)
 
 	// Run the server over stdin/stdout, until the client disconnects.
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
